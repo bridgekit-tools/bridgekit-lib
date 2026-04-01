@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://packagist.org/packages/bridgekit/bridgekit-lib"><img src="https://img.shields.io/packagist/v/bridgekit/bridgekit-lib.svg?style=flat-square" alt="Latest Version"></a>
-  <a href="https://packagist.org/packages/bridgekit/bridgekit-lib"><img src="https://img.shields.io/packagist/dt/bridgekit/bridgekit-lib.svg?style=flat-square" alt="Total Downloads"></a>
+  <a href="https://packagist.org/packages/bridgekit-tools/bridgekit-lib"><img src="https://img.shields.io/packagist/v/bridgekit-tools/bridgekit-lib.svg?style=flat-square" alt="Latest Version"></a>
+  <a href="https://packagist.org/packages/bridgekit-tools/bridgekit-lib"><img src="https://img.shields.io/packagist/dt/bridgekit-tools/bridgekit-lib.svg?style=flat-square" alt="Total Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
   <a href="https://github.com/bridgekit-tools/bridgekit-lib/actions"><img src="https://img.shields.io/github/actions/workflow/status/bridgekit-tools/bridgekit-lib/tests.yml?style=flat-square&label=tests" alt="Tests"></a>
 </p>
@@ -60,7 +60,7 @@ $result = BridgeKit::linkedin()->setToken($token)->posts()->publish(
 ## Installation
 
 ```bash
-composer require bridgekit/bridgekit-lib
+composer require bridgekit-tools/bridgekit-lib
 ```
 
 The service provider and facade are auto-discovered. Publish the config:
