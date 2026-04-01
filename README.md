@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bridgekit-tools/bridgekit-lib/main/.github/logo.svg" width="200" alt="BridgeKit">
+  <img src="https://raw.githubusercontent.com/bridgekit-tools/bridgekit-lib/main/.github/logo.svg" width="80" alt="BridgeKit">
 </p>
+
+<h1 align="center">BridgeKit</h1>
 
 <p align="center">
   <strong>Universal Laravel Integration Library</strong><br>
