@@ -13,4 +13,5 @@ enum ServiceType: string
     case Outlook = 'outlook';
     case Calendar = 'calendar';
     case Posts = 'posts';
+    case Storage = 'storage';
 }

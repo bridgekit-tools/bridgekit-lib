@@ -43,6 +43,36 @@ return [
             'scopes' => [],
         ],
 
+        'ftp' => [
+            'host' => env('BRIDGEKIT_FTP_HOST', 'localhost'),
+            'port' => env('BRIDGEKIT_FTP_PORT', 21),
+            'username' => env('BRIDGEKIT_FTP_USERNAME'),
+            'password' => env('BRIDGEKIT_FTP_PASSWORD'),
+            'ssl' => env('BRIDGEKIT_FTP_SSL', false),
+            'passive' => env('BRIDGEKIT_FTP_PASSIVE', true),
+            'root' => env('BRIDGEKIT_FTP_ROOT', '/'),
+            'timeout' => env('BRIDGEKIT_FTP_TIMEOUT', 30),
+        ],
+
+        's3' => [
+            'key' => env('BRIDGEKIT_S3_KEY'),
+            'secret' => env('BRIDGEKIT_S3_SECRET'),
+            'region' => env('BRIDGEKIT_S3_REGION', 'us-east-1'),
+            'bucket' => env('BRIDGEKIT_S3_BUCKET'),
+            'endpoint' => env('BRIDGEKIT_S3_ENDPOINT'),
+        ],
+
+        'sftp' => [
+            'host' => env('BRIDGEKIT_SFTP_HOST', 'localhost'),
+            'port' => env('BRIDGEKIT_SFTP_PORT', 22),
+            'username' => env('BRIDGEKIT_SFTP_USERNAME'),
+            'password' => env('BRIDGEKIT_SFTP_PASSWORD'),
+            'private_key' => env('BRIDGEKIT_SFTP_PRIVATE_KEY'),
+            'public_key' => env('BRIDGEKIT_SFTP_PUBLIC_KEY'),
+            'passphrase' => env('BRIDGEKIT_SFTP_PASSPHRASE'),
+            'root' => env('BRIDGEKIT_SFTP_ROOT', '/'),
+        ],
+
     ],
 
 ];

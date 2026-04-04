@@ -7,10 +7,13 @@ namespace BridgeKit\Tests\Unit\Support;
 use BridgeKit\Contracts\Auth\OAuthInterface;
 use BridgeKit\DTOs\OAuthToken;
 use BridgeKit\Exceptions\InvalidConfigException;
+use BridgeKit\Providers\Ftp\FtpProvider;
 use BridgeKit\Providers\Google\GoogleProvider;
 use BridgeKit\Providers\LinkedIn\LinkedInProvider;
 use BridgeKit\Providers\Meta\MetaProvider;
 use BridgeKit\Providers\Microsoft\MicrosoftProvider;
+use BridgeKit\Providers\S3\S3Provider;
+use BridgeKit\Providers\Sftp\SftpProvider;
 use BridgeKit\Providers\X\XProvider;
 use BridgeKit\Support\AbstractProvider;
 use BridgeKit\Support\ConnectManager;
@@ -59,6 +62,48 @@ final class ConnectManagerTest extends TestCase
         $manager = new ConnectManager([]);
 
         $this->assertInstanceOf(XProvider::class, $manager->provider('x'));
+    }
+
+    public function test_provider_returns_ftp(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(FtpProvider::class, $manager->provider('ftp'));
+    }
+
+    public function test_provider_returns_s3(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(S3Provider::class, $manager->provider('s3'));
+    }
+
+    public function test_provider_returns_sftp(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(SftpProvider::class, $manager->provider('sftp'));
+    }
+
+    public function test_ftp_shortcut(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(FtpProvider::class, $manager->ftp());
+    }
+
+    public function test_s3_shortcut(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(S3Provider::class, $manager->s3());
+    }
+
+    public function test_sftp_shortcut(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(SftpProvider::class, $manager->sftp());
     }
 
     public function test_provider_unknown_throws_invalid_config_exception(): void

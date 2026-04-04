@@ -7,10 +7,13 @@ namespace BridgeKit\Support;
 use BridgeKit\Contracts\ProviderInterface;
 use BridgeKit\Enums\Provider;
 use BridgeKit\Exceptions\InvalidConfigException;
+use BridgeKit\Providers\Ftp\FtpProvider;
 use BridgeKit\Providers\Google\GoogleProvider;
 use BridgeKit\Providers\LinkedIn\LinkedInProvider;
 use BridgeKit\Providers\Meta\MetaProvider;
 use BridgeKit\Providers\Microsoft\MicrosoftProvider;
+use BridgeKit\Providers\S3\S3Provider;
+use BridgeKit\Providers\Sftp\SftpProvider;
 use BridgeKit\Providers\X\XProvider;
 
 class ConnectManager
@@ -22,6 +25,9 @@ class ConnectManager
         Provider::Meta->value => MetaProvider::class,
         Provider::LinkedIn->value => LinkedInProvider::class,
         Provider::X->value => XProvider::class,
+        Provider::Ftp->value => FtpProvider::class,
+        Provider::S3->value => S3Provider::class,
+        Provider::Sftp->value => SftpProvider::class,
     ];
 
     /** @var array<string, ProviderInterface> */
@@ -99,6 +105,36 @@ class ConnectManager
 
         /** @var XProvider */
         return $this->provider(Provider::X);
+    }
+
+    public function ftp(?array $config = null): FtpProvider
+    {
+        if ($config !== null) {
+            return new FtpProvider($config);
+        }
+
+        /** @var FtpProvider */
+        return $this->provider(Provider::Ftp);
+    }
+
+    public function s3(?array $config = null): S3Provider
+    {
+        if ($config !== null) {
+            return new S3Provider($config);
+        }
+
+        /** @var S3Provider */
+        return $this->provider(Provider::S3);
+    }
+
+    public function sftp(?array $config = null): SftpProvider
+    {
+        if ($config !== null) {
+            return new SftpProvider($config);
+        }
+
+        /** @var SftpProvider */
+        return $this->provider(Provider::Sftp);
     }
 
     /**

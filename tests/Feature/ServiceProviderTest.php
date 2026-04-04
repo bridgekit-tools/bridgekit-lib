@@ -27,6 +27,6 @@ final class ServiceProviderTest extends TestCase
 
     public function test_facade_works(): void
     {
-        self::assertCount(5, BridgeKit::getRegisteredProviders());
+        self::assertCount(8, BridgeKit::getRegisteredProviders());
     }
 }

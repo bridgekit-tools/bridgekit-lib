@@ -30,6 +30,10 @@
         "phpunit/phpunit": "^11.0",
         "orchestra/testbench": "^9.0 || ^10.0 || ^11.0"
     },
+    "suggest": {
+        "ext-ssh2": "Required for SFTP storage provider",
+        "ext-ftp": "Required for FTP storage provider"
+    },
     "autoload": {
         "psr-4": {
             "BridgeKit\\": "src/"

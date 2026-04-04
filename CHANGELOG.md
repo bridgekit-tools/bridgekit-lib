@@ -5,6 +5,27 @@ All notable changes to BridgeKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-29
+
+### Added
+
+- **3 new storage providers**: FTP/FTPS, S3 (AWS + compatible), SFTP — all implement `FileStorageInterface`
+- **`AbstractStorageProvider`** — new base class for credential-based providers (no OAuth required)
+- **`FtpProvider`** + `FtpStorageService` — FTP/FTPS with SSL, passive mode, `ftp_mlsd` listing
+- **`S3Provider`** + `S3StorageService` — native AWS Signature V4, multipart uploads, compatible with MinIO, DigitalOcean Spaces, Cloudflare R2
+- **`SftpProvider`** + `SftpStorageService` — password or SSH public key authentication, chunked streaming
+- **Inline config support** — all storage providers can be instantiated with config arrays, no `.env` required
+- **`Provider` enum**: 3 new cases (`Ftp`, `S3`, `Sftp`) + helper methods `isStorageOnly()`, `requiresOAuth()`
+- **`ServiceType::Storage`** enum case
+- **`ConnectManager`** shortcuts: `ftp()`, `s3()`, `sftp()`
+- **`composer.json`**: `suggest` for `ext-ssh2` and `ext-ftp`
+- **128 tests, 322 assertions** — full coverage for all new providers, enum helpers, and ConnectManager
+
+### Changed
+
+- Updated provider count from 5 to 8 in `ServiceProviderTest`
+- Architecture diagram now shows two provider hierarchies (OAuth vs Credentials)
+
 ## [1.0.0] - 2026-03-29
 
 ### Added
