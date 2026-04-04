@@ -33,11 +33,19 @@ final class MetaProviderTest extends TestCase
         self::assertInstanceOf(MetaPostsService::class, $provider->posts());
     }
 
+    public function test_webhooks_returns_webhook_service(): void
+    {
+        $provider = new MetaProvider();
+
+        self::assertInstanceOf(\BridgeKit\Contracts\Webhook\WebhookInterface::class, $provider->webhooks());
+    }
+
     public function test_available_services(): void
     {
         $provider = new MetaProvider();
 
-        self::assertCount(2, $provider->getAvailableServices());
+        self::assertCount(3, $provider->getAvailableServices());
+        self::assertArrayHasKey('webhooks', $provider->getAvailableServices());
     }
 
     public function test_set_and_get_token(): void

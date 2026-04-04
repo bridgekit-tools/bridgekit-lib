@@ -5,6 +5,28 @@ All notable changes to BridgeKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-04
+
+### Added
+
+- **Webhooks** — `WebhookInterface`, `WebhookEvent` enum, `WebhookPayload` / `WebhookRegistration` DTOs, `WebhookProcessor`, and `WebhookController` HTTP endpoint. Provider services: Google (Drive/Calendar push), Microsoft Graph subscriptions, Meta (`X-Hub-Signature-256`), X (CRC + signature). Laravel events for storage, social, and calendar. Config: `bridgekit.webhooks` (`enabled`, `path`, `middleware`). Routes: `POST/GET /webhooks/bridgekit/{provider}`.
+- **Token auto-refresh** — `HasHttpClient` detects expired tokens (with 60s buffer) and automatically calls `refreshToken()` before each API request. Zero config, works for all OAuth providers.
+- **Retry + Rate limiting** — built-in retry with exponential backoff for 429/5xx errors. `RateLimitException` surfaces `retryAfter` seconds. Configurable via `withRetry(maxRetries, baseDelayMs)`.
+- **Multi-posting** — `MultiPoster` broadcasts a `SocialPost` across multiple providers in one call. Auto-adapts content per platform (X: 280 chars, Meta: 63k, LinkedIn: 3k). Returns `MultiPostResult` with success/failure per provider.
+- **Dropbox provider** — full OAuth + `FileStorageInterface`. Upload sessions for large files, search, folder creation. Configured via `BRIDGEKIT_DROPBOX_*` env vars.
+- **`MultiPostResult` DTO** — `isFullSuccess()`, `isPartialSuccess()`, `isFullFailure()`, `getResult(provider)`, `getError(provider)`.
+- **`RateLimitException`** — extends `ProviderException` with `retryAfter` property and HTTP 429 code.
+- **`ConnectManager::multiPost()`** — factory shortcut for `MultiPoster`.
+- **`ConnectManager::dropbox()`** — shortcut for Dropbox provider.
+- **Google, Microsoft, Meta, X** — `webhooks()` service on each OAuth provider.
+- **176 tests, 448 assertions** — coverage for webhooks, multi-post, Dropbox, HTTP client behavior, and providers.
+
+### Changed
+
+- `HasHttpClient` now handles retry, rate limiting, and token auto-refresh automatically.
+- `BridgeKitServiceProvider` registers webhook routes and `WebhookProcessor` singleton.
+- Updated provider count from 8 to 9 in `ServiceProviderTest`.
+
 ## [1.1.0] - 2026-03-29
 
 ### Added

@@ -11,6 +11,7 @@ enum Provider: string
     case Meta = 'meta';
     case LinkedIn = 'linkedin';
     case X = 'x';
+    case Dropbox = 'dropbox';
     case Ftp = 'ftp';
     case S3 = 's3';
     case Sftp = 'sftp';

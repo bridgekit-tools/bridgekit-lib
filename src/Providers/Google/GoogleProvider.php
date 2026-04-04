@@ -6,10 +6,12 @@ namespace BridgeKit\Providers\Google;
 
 use BridgeKit\Contracts\Auth\OAuthInterface;
 use BridgeKit\Contracts\Calendar\CalendarInterface;
+use BridgeKit\Contracts\Webhook\WebhookInterface;
 use BridgeKit\Providers\Google\Services\GoogleAuthService;
 use BridgeKit\Providers\Google\Services\GoogleCalendarService;
 use BridgeKit\Providers\Google\Services\GoogleDriveService;
 use BridgeKit\Providers\Google\Services\GoogleGmailService;
+use BridgeKit\Providers\Google\Services\GoogleWebhookService;
 use BridgeKit\Support\AbstractProvider;
 
 class GoogleProvider extends AbstractProvider
@@ -39,6 +41,11 @@ class GoogleProvider extends AbstractProvider
         return $this->resolveService('calendar', fn () => new GoogleCalendarService($this));
     }
 
+    public function webhooks(): WebhookInterface
+    {
+        return $this->resolveService('webhooks', fn () => new GoogleWebhookService($this));
+    }
+
     public function getAvailableServices(): array
     {
         return [
@@ -46,6 +53,7 @@ class GoogleProvider extends AbstractProvider
             'drive' => GoogleDriveService::class,
             'gmail' => GoogleGmailService::class,
             'calendar' => GoogleCalendarService::class,
+            'webhooks' => GoogleWebhookService::class,
         ];
     }
 }

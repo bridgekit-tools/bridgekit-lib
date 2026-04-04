@@ -51,11 +51,19 @@ final class MicrosoftProviderTest extends TestCase
         self::assertInstanceOf(MicrosoftCalendarService::class, $provider->calendar());
     }
 
+    public function test_webhooks_returns_webhook_service(): void
+    {
+        $provider = new MicrosoftProvider();
+
+        self::assertInstanceOf(\BridgeKit\Contracts\Webhook\WebhookInterface::class, $provider->webhooks());
+    }
+
     public function test_available_services(): void
     {
         $provider = new MicrosoftProvider();
 
-        self::assertCount(4, $provider->getAvailableServices());
+        self::assertCount(5, $provider->getAvailableServices());
+        self::assertArrayHasKey('webhooks', $provider->getAvailableServices());
     }
 
     public function test_tenant_defaults_to_common(): void

@@ -7,6 +7,7 @@ namespace BridgeKit\Support;
 use BridgeKit\Contracts\ProviderInterface;
 use BridgeKit\Enums\Provider;
 use BridgeKit\Exceptions\InvalidConfigException;
+use BridgeKit\Providers\Dropbox\DropboxProvider;
 use BridgeKit\Providers\Ftp\FtpProvider;
 use BridgeKit\Providers\Google\GoogleProvider;
 use BridgeKit\Providers\LinkedIn\LinkedInProvider;
@@ -25,6 +26,7 @@ class ConnectManager
         Provider::Meta->value => MetaProvider::class,
         Provider::LinkedIn->value => LinkedInProvider::class,
         Provider::X->value => XProvider::class,
+        Provider::Dropbox->value => DropboxProvider::class,
         Provider::Ftp->value => FtpProvider::class,
         Provider::S3->value => S3Provider::class,
         Provider::Sftp->value => SftpProvider::class,
@@ -107,6 +109,16 @@ class ConnectManager
         return $this->provider(Provider::X);
     }
 
+    public function dropbox(?array $config = null): DropboxProvider
+    {
+        if ($config !== null) {
+            return new DropboxProvider($config);
+        }
+
+        /** @var DropboxProvider */
+        return $this->provider(Provider::Dropbox);
+    }
+
     public function ftp(?array $config = null): FtpProvider
     {
         if ($config !== null) {
@@ -153,6 +165,14 @@ class ConnectManager
     public function getRegisteredProviders(): array
     {
         return $this->providerMap;
+    }
+
+    /**
+     * Create a MultiPoster to publish a post to multiple social providers at once.
+     */
+    public function multiPost(): MultiPoster
+    {
+        return new MultiPoster();
     }
 
     public function flush(): void

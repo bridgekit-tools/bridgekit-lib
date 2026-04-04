@@ -32,10 +32,18 @@ final class XProviderTest extends TestCase
         self::assertInstanceOf(XPostsService::class, $provider->posts());
     }
 
+    public function test_webhooks_returns_webhook_service(): void
+    {
+        $provider = new XProvider();
+
+        self::assertInstanceOf(\BridgeKit\Contracts\Webhook\WebhookInterface::class, $provider->webhooks());
+    }
+
     public function test_available_services(): void
     {
         $provider = new XProvider();
 
-        self::assertCount(2, $provider->getAvailableServices());
+        self::assertCount(3, $provider->getAvailableServices());
+        self::assertArrayHasKey('webhooks', $provider->getAvailableServices());
     }
 }

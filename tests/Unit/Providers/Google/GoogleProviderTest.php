@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace BridgeKit\Tests\Unit\Providers\Google;
 
+use BridgeKit\Contracts\Calendar\CalendarInterface;
+use BridgeKit\Contracts\Webhook\WebhookInterface;
 use BridgeKit\DTOs\OAuthToken;
 use BridgeKit\Providers\Google\GoogleProvider;
 use BridgeKit\Providers\Google\Services\GoogleAuthService;
-use BridgeKit\Contracts\Calendar\CalendarInterface;
 use BridgeKit\Providers\Google\Services\GoogleCalendarService;
 use BridgeKit\Providers\Google\Services\GoogleDriveService;
 use BridgeKit\Providers\Google\Services\GoogleGmailService;
+use BridgeKit\Providers\Google\Services\GoogleWebhookService;
 use PHPUnit\Framework\TestCase;
 
 final class GoogleProviderTest extends TestCase
@@ -51,11 +53,20 @@ final class GoogleProviderTest extends TestCase
         self::assertInstanceOf(GoogleCalendarService::class, $provider->calendar());
     }
 
+    public function test_webhooks_returns_webhook_interface(): void
+    {
+        $provider = new GoogleProvider();
+
+        self::assertInstanceOf(WebhookInterface::class, $provider->webhooks());
+        self::assertInstanceOf(GoogleWebhookService::class, $provider->webhooks());
+    }
+
     public function test_available_services(): void
     {
         $provider = new GoogleProvider();
 
-        self::assertCount(4, $provider->getAvailableServices());
+        self::assertCount(5, $provider->getAvailableServices());
+        self::assertArrayHasKey('webhooks', $provider->getAvailableServices());
     }
 
     public function test_services_are_cached(): void

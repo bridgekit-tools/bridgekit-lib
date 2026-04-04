@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace BridgeKit;
 
 use BridgeKit\Support\ConnectManager;
+use BridgeKit\Webhooks\WebhookController;
+use BridgeKit\Webhooks\WebhookProcessor;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class BridgeKitServiceProvider extends ServiceProvider
@@ -18,6 +21,8 @@ class BridgeKitServiceProvider extends ServiceProvider
         });
 
         $this->app->alias(ConnectManager::class, 'bridgekit');
+
+        $this->app->singleton(WebhookProcessor::class);
     }
 
     public function boot(): void
@@ -27,5 +32,26 @@ class BridgeKitServiceProvider extends ServiceProvider
                 __DIR__ . '/../config/bridgekit.php' => config_path('bridgekit.php'),
             ], 'bridgekit-config');
         }
+
+        $this->registerWebhookRoutes();
+    }
+
+    private function registerWebhookRoutes(): void
+    {
+        $webhookConfig = $this->app['config']->get('bridgekit.webhooks', []);
+
+        if (! ($webhookConfig['enabled'] ?? true)) {
+            return;
+        }
+
+        $prefix = $webhookConfig['path'] ?? 'webhooks/bridgekit';
+        $middleware = $webhookConfig['middleware'] ?? [];
+
+        Route::prefix($prefix)
+            ->middleware($middleware)
+            ->group(function () {
+                Route::match(['get', 'post'], '/{provider}', WebhookController::class)
+                    ->name('bridgekit.webhooks');
+            });
     }
 }

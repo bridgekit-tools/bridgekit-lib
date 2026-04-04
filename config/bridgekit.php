@@ -43,6 +43,12 @@ return [
             'scopes' => [],
         ],
 
+        'dropbox' => [
+            'client_id' => env('BRIDGEKIT_DROPBOX_CLIENT_ID'),
+            'client_secret' => env('BRIDGEKIT_DROPBOX_CLIENT_SECRET'),
+            'redirect_uri' => env('BRIDGEKIT_DROPBOX_REDIRECT_URI'),
+        ],
+
         'ftp' => [
             'host' => env('BRIDGEKIT_FTP_HOST', 'localhost'),
             'port' => env('BRIDGEKIT_FTP_PORT', 21),
@@ -73,6 +79,12 @@ return [
             'root' => env('BRIDGEKIT_SFTP_ROOT', '/'),
         ],
 
+    ],
+
+    'webhooks' => [
+        'enabled' => env('BRIDGEKIT_WEBHOOKS_ENABLED', true),
+        'path' => env('BRIDGEKIT_WEBHOOKS_PATH', 'webhooks/bridgekit'),
+        'middleware' => [],
     ],
 
 ];

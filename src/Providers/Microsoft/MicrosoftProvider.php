@@ -6,10 +6,12 @@ namespace BridgeKit\Providers\Microsoft;
 
 use BridgeKit\Contracts\Auth\OAuthInterface;
 use BridgeKit\Contracts\Calendar\CalendarInterface;
+use BridgeKit\Contracts\Webhook\WebhookInterface;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftAuthService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftCalendarService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftOneDriveService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftOutlookService;
+use BridgeKit\Providers\Microsoft\Services\MicrosoftWebhookService;
 use BridgeKit\Support\AbstractProvider;
 
 class MicrosoftProvider extends AbstractProvider
@@ -55,6 +57,14 @@ class MicrosoftProvider extends AbstractProvider
     /**
      * @return array<string, class-string>
      */
+    public function webhooks(): WebhookInterface
+    {
+        return $this->resolveService(
+            'webhooks',
+            fn (): MicrosoftWebhookService => new MicrosoftWebhookService($this),
+        );
+    }
+
     public function getAvailableServices(): array
     {
         return [
@@ -62,6 +72,7 @@ class MicrosoftProvider extends AbstractProvider
             'onedrive' => MicrosoftOneDriveService::class,
             'outlook' => MicrosoftOutlookService::class,
             'calendar' => MicrosoftCalendarService::class,
+            'webhooks' => MicrosoftWebhookService::class,
         ];
     }
 

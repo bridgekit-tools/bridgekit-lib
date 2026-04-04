@@ -23,11 +23,13 @@ final class ProviderTest extends TestCase
         self::assertFalse(Provider::Meta->isStorageOnly());
         self::assertFalse(Provider::LinkedIn->isStorageOnly());
         self::assertFalse(Provider::X->isStorageOnly());
+        self::assertFalse(Provider::Dropbox->isStorageOnly());
     }
 
     public function test_requires_oauth(): void
     {
         self::assertTrue(Provider::Google->requiresOAuth());
+        self::assertTrue(Provider::Dropbox->requiresOAuth());
         self::assertFalse(Provider::Ftp->requiresOAuth());
         self::assertFalse(Provider::S3->requiresOAuth());
         self::assertFalse(Provider::Sftp->requiresOAuth());
@@ -35,6 +37,7 @@ final class ProviderTest extends TestCase
 
     public function test_backed_values(): void
     {
+        self::assertSame('dropbox', Provider::Dropbox->value);
         self::assertSame('ftp', Provider::Ftp->value);
         self::assertSame('s3', Provider::S3->value);
         self::assertSame('sftp', Provider::Sftp->value);

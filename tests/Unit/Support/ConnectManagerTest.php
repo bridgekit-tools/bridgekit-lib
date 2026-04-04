@@ -7,6 +7,7 @@ namespace BridgeKit\Tests\Unit\Support;
 use BridgeKit\Contracts\Auth\OAuthInterface;
 use BridgeKit\DTOs\OAuthToken;
 use BridgeKit\Exceptions\InvalidConfigException;
+use BridgeKit\Providers\Dropbox\DropboxProvider;
 use BridgeKit\Providers\Ftp\FtpProvider;
 use BridgeKit\Providers\Google\GoogleProvider;
 use BridgeKit\Providers\LinkedIn\LinkedInProvider;
@@ -62,6 +63,20 @@ final class ConnectManagerTest extends TestCase
         $manager = new ConnectManager([]);
 
         $this->assertInstanceOf(XProvider::class, $manager->provider('x'));
+    }
+
+    public function test_provider_returns_dropbox(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(DropboxProvider::class, $manager->provider('dropbox'));
+    }
+
+    public function test_dropbox_shortcut(): void
+    {
+        $manager = new ConnectManager([]);
+
+        $this->assertInstanceOf(DropboxProvider::class, $manager->dropbox());
     }
 
     public function test_provider_returns_ftp(): void
