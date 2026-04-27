@@ -11,6 +11,7 @@ use BridgeKit\Providers\Microsoft\Services\MicrosoftAuthService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftCalendarService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftOneDriveService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftOutlookService;
+use BridgeKit\Providers\Microsoft\Services\MicrosoftSharePointService;
 use PHPUnit\Framework\TestCase;
 
 final class MicrosoftProviderTest extends TestCase
@@ -34,6 +35,25 @@ final class MicrosoftProviderTest extends TestCase
         $provider = new MicrosoftProvider();
 
         self::assertInstanceOf(MicrosoftOneDriveService::class, $provider->onedrive());
+    }
+
+    public function test_sharepoint_returns_sharepoint_service(): void
+    {
+        $provider = new MicrosoftProvider();
+
+        self::assertInstanceOf(MicrosoftSharePointService::class, $provider->sharepoint([
+            'site_id' => 'contoso.sharepoint.com,abc,def',
+        ]));
+    }
+
+    public function test_sharepoint_uses_inline_config_each_call(): void
+    {
+        $provider = new MicrosoftProvider();
+
+        $a = $provider->sharepoint(['site_id' => 'site-A']);
+        $b = $provider->sharepoint(['site_id' => 'site-B']);
+
+        self::assertNotSame($a, $b);
     }
 
     public function test_outlook_returns_outlook_service(): void
@@ -62,8 +82,9 @@ final class MicrosoftProviderTest extends TestCase
     {
         $provider = new MicrosoftProvider();
 
-        self::assertCount(5, $provider->getAvailableServices());
+        self::assertCount(6, $provider->getAvailableServices());
         self::assertArrayHasKey('webhooks', $provider->getAvailableServices());
+        self::assertArrayHasKey('sharepoint', $provider->getAvailableServices());
     }
 
     public function test_tenant_defaults_to_common(): void

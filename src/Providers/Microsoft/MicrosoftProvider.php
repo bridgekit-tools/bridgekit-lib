@@ -11,6 +11,7 @@ use BridgeKit\Providers\Microsoft\Services\MicrosoftAuthService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftCalendarService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftOneDriveService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftOutlookService;
+use BridgeKit\Providers\Microsoft\Services\MicrosoftSharePointService;
 use BridgeKit\Providers\Microsoft\Services\MicrosoftWebhookService;
 use BridgeKit\Support\AbstractProvider;
 
@@ -35,6 +36,36 @@ class MicrosoftProvider extends AbstractProvider
         return $this->resolveService(
             'onedrive',
             fn (): MicrosoftOneDriveService => new MicrosoftOneDriveService($this),
+        );
+    }
+
+    /**
+     * SharePoint document library service.
+     *
+     * Pass an inline configuration array to target a specific site/library:
+     *
+     *   $sp = BridgeKit::microsoft()->setToken($token)->sharepoint([
+     *       'site_path' => '/contoso.sharepoint.com:/sites/marketing',
+     *       // optional: 'drive_id' => '...',
+     *   ]);
+     *
+     * Without arguments, it falls back to the `sharepoint` section of the
+     * provider config (config/bridgekit.php).
+     *
+     * @param  array<string, mixed>|null  $config
+     */
+    public function sharepoint(?array $config = null): MicrosoftSharePointService
+    {
+        if ($config !== null) {
+            return new MicrosoftSharePointService($this, $config);
+        }
+
+        return $this->resolveService(
+            'sharepoint',
+            fn (): MicrosoftSharePointService => new MicrosoftSharePointService(
+                $this,
+                (array) $this->config('sharepoint', []),
+            ),
         );
     }
 
@@ -70,6 +101,7 @@ class MicrosoftProvider extends AbstractProvider
         return [
             'auth' => MicrosoftAuthService::class,
             'onedrive' => MicrosoftOneDriveService::class,
+            'sharepoint' => MicrosoftSharePointService::class,
             'outlook' => MicrosoftOutlookService::class,
             'calendar' => MicrosoftCalendarService::class,
             'webhooks' => MicrosoftWebhookService::class,

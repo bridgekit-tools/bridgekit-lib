@@ -5,6 +5,21 @@ All notable changes to BridgeKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-27
+
+### Added
+
+- **Folder & file tree** — new `StorageTreeNode` DTO + `listTree()` method on `FileStorageInterface`. Walks a storage hierarchy recursively and returns a JSON-serializable, depth-aware tree. Helpers: `walk()` (depth-first generator), `countDescendants()`, `totalSize()`, `toAscii()` (Unix `tree`-style rendering).
+- **`BuildsFileTree` trait** — default `listTree()` implementation built on `listFilesLazy()`. Drop-in for any new provider. Honours `max_depth`, `include_files`, `include_folders`, `root_name` options.
+- **S3 web URL** — `S3StorageService` now populates `StorageFile::$webUrl` for every listed/uploaded/fetched object. Auto-detects virtual-host (`https://{bucket}.s3.{region}.amazonaws.com/{key}`) vs path-style (`{endpoint}/{bucket}/{key}` for MinIO, R2, custom endpoints). Added `getPresignedUrl(string $fileId, int $expiresIn = 900)` for time-limited authenticated links.
+- **SharePoint provider** — `MicrosoftSharePointService` implementing `FileStorageInterface` over Microsoft Graph document libraries. Configure with `site_id` or `site_path`, optionally `drive_id`. Same upload-session protocol as OneDrive (chunked + resumable). Helper `listLibraries()` enumerates document libraries on the site. Exposed via `BridgeKit::microsoft()->sharepoint([...])`.
+- **Tests** — coverage for `StorageTreeNode`, `BuildsFileTree`, S3 web URL building (virtual-host & path-style), URL encoding, presigned URL generation, and the new SharePoint service entry on the Microsoft provider.
+
+### Changed
+
+- `FileStorageInterface` gains `listTree()`. Existing custom providers should `use BuildsFileTree;` to inherit the default behaviour, or implement it directly.
+- `MicrosoftProvider::getAvailableServices()` now returns 6 entries (added `sharepoint`).
+
 ## [1.2.0] - 2026-04-04
 
 ### Added

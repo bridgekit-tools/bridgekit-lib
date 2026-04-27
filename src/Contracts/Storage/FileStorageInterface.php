@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BridgeKit\Contracts\Storage;
 
 use BridgeKit\DTOs\StorageFile;
+use BridgeKit\DTOs\StorageTreeNode;
 use Generator;
 
 interface FileStorageInterface
@@ -23,6 +24,20 @@ interface FileStorageInterface
      * @return Generator<int, StorageFile>
      */
     public function listFilesLazy(string $folderId = '', array $options = []): Generator;
+
+    /**
+     * Build a recursive tree of folders and files starting at `$folderId`.
+     *
+     * Implementations walk the storage hierarchy and return a `StorageTreeNode`
+     * whose `children` are themselves `StorageTreeNode` instances. The tree
+     * can be safely serialized to JSON or printed via `toAscii()`.
+     *
+     * @param  array<string, mixed>  $options Driver-specific options. Common keys:
+     *                                        - `max_depth` (int, default 10) hard limit on recursion depth
+     *                                        - `include_files` (bool, default true)
+     *                                        - `include_folders` (bool, default true)
+     */
+    public function listTree(string $folderId = '', array $options = []): StorageTreeNode;
 
     public function getFile(string $fileId): StorageFile;
 

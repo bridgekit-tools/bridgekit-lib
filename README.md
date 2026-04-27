@@ -141,6 +141,50 @@ foreach ($drive->listFilesLazy() as $file) {
 }
 ```
 
+### Folders & files as a tree
+
+Every storage provider exposes `listTree()` which returns a recursive
+`StorageTreeNode`. It can be JSON-serialised, walked depth-first, or rendered
+as ASCII for logs/debug output.
+
+```php
+$tree = BridgeKit::s3()->storage()->listTree('photos/', [
+    'max_depth' => 3,
+    'include_files' => true,
+]);
+
+echo $tree->toAscii();
+// photos/
+// ├── 2025/
+// │   ├── team.jpg
+// │   └── trip.jpg
+// └── logo.png
+
+echo $tree->countDescendants(); // 4
+echo $tree->totalSize();        // cumulative bytes
+
+foreach ($tree->walk() as $node) {
+    if ($node->isFile()) {
+        echo $node->file->webUrl;
+    }
+}
+```
+
+### SharePoint document libraries
+
+```php
+$sp = BridgeKit::microsoft()->setToken($token)->sharepoint([
+    'site_path' => '/contoso.sharepoint.com:/sites/marketing',
+    // 'drive_id' => '...', // optional, defaults to the site's Documents library
+]);
+
+$tree = $sp->listTree();
+$file = $sp->uploadLargeFile('campaign.pdf', '/local/campaign.pdf', 'application/pdf');
+$libraries = $sp->listLibraries();
+```
+
+Required Graph scopes (delegated): `Sites.Read.All`, `Files.ReadWrite.All`.
+
 ### Social Publishing
 
 ```php
@@ -210,10 +254,14 @@ BridgeKit::extend('dropbox', DropboxProvider::class);
 | Provider | Storage | Email | Calendar | Social | OAuth |
 |----------|---------|-------|----------|--------|-------|
 | Google | `drive()` | `gmail()` | `calendar()` | — | `auth()` |
-| Microsoft | `onedrive()` | `outlook()` | `calendar()` | — | `auth()` |
+| Microsoft | `onedrive()`, `sharepoint()` | `outlook()` | `calendar()` | — | `auth()` |
 | Meta | — | — | — | `posts()` | `auth()` |
 | LinkedIn | — | — | — | `posts()` | `auth()` |
 | X | — | — | — | `posts()` | `auth()` |
+| Dropbox | `storage()` | — | — | — | `auth()` |
+| S3 (AWS, MinIO, R2, …) | `storage()` | — | — | — | — |
+| FTP / FTPS | `storage()` | — | — | — | — |
+| SFTP | `storage()` | — | — | — | — |
 
 ## Architecture
 

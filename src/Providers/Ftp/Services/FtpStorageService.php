@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BridgeKit\Providers\Ftp\Services;
 
+use BridgeKit\Concerns\BuildsFileTree;
 use BridgeKit\Contracts\Storage\FileStorageInterface;
 use BridgeKit\DTOs\StorageFile;
 use BridgeKit\Exceptions\ProviderException;
@@ -12,6 +13,8 @@ use Generator;
 
 class FtpStorageService implements FileStorageInterface
 {
+    use BuildsFileTree;
+
     /** @var \FTP\Connection|null */
     private mixed $connection = null;
 

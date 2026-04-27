@@ -12,17 +12,36 @@ use BridgeKit\Providers\Microsoft\MicrosoftProvider;
 use BridgeKit\Support\AbstractService;
 use DateTimeImmutable;
 use Generator;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
-class MicrosoftOneDriveService extends AbstractService implements FileStorageInterface
+/**
+ * SharePoint document library access via Microsoft Graph.
+ *
+ * SharePoint sites expose a "drive" (the default Documents library) that is
+ * structurally identical to OneDrive in the Graph API: same item IDs, same
+ * upload-session protocol, same children endpoint.
+ *
+ * Configure either:
+ *   - `site_id`     full Graph site identifier (e.g. `contoso.sharepoint.com,<guid>,<guid>`)
+ *   - `site_path`   `/{hostname}:/sites/{site-name}` shorthand which is auto-resolved
+ *
+ * Optional:
+ *   - `drive_id`    target a specific document library; defaults to the site's main drive
+ *
+ * Required Graph scopes (delegated): `Sites.Read.All`, `Files.ReadWrite.All`.
+ */
+class MicrosoftSharePointService extends AbstractService implements FileStorageInterface
 {
     use BuildsFileTree;
 
-    private const string BASE_URL = 'https://graph.microsoft.com/v1.0/me/drive';
+    private const string GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
-    public function __construct(MicrosoftProvider $provider)
-    {
+    private ?string $resolvedDriveBase = null;
+
+    public function __construct(
+        MicrosoftProvider $provider,
+        private readonly array $config = [],
+    ) {
         parent::__construct($provider);
     }
 
@@ -37,9 +56,11 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
 
     public function listFilesLazy(string $folderId = '', array $options = []): Generator
     {
+        $base = $this->driveBase();
+
         $url = $folderId === ''
-            ? self::BASE_URL . '/root/children'
-            : self::BASE_URL . '/items/' . rawurlencode($folderId) . '/children';
+            ? $base . '/root/children'
+            : $base . '/items/' . rawurlencode($folderId) . '/children';
 
         do {
             $response = $this->authenticatedHttp()->get($url, $options);
@@ -55,20 +76,29 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
     }
 
     // ──────────────────────────────────────────────
-    //  GET
+    //  GET / DELETE
     // ──────────────────────────────────────────────
 
     public function getFile(string $fileId): StorageFile
     {
         $response = $this->authenticatedHttp()->get(
-            self::BASE_URL . '/items/' . rawurlencode($fileId)
+            $this->driveBase() . '/items/' . rawurlencode($fileId)
         );
 
         return $this->mapDriveItem($response->json());
     }
 
+    public function deleteFile(string $fileId): bool
+    {
+        $response = $this->authenticatedHttp()->delete(
+            $this->driveBase() . '/items/' . rawurlencode($fileId)
+        );
+
+        return $response->successful();
+    }
+
     // ──────────────────────────────────────────────
-    //  UPLOAD (small -- single PUT, <=4 MiB)
+    //  UPLOAD
     // ──────────────────────────────────────────────
 
     public function uploadFile(string $name, mixed $content, string $mimeType = '', string $folderId = ''): StorageFile
@@ -81,10 +111,11 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
         }
 
         $mime = $mimeType !== '' ? $mimeType : 'application/octet-stream';
+        $base = $this->driveBase();
 
         $path = $folderId === ''
-            ? self::BASE_URL . '/root:/' . rawurlencode($name) . ':/content'
-            : self::BASE_URL . '/items/' . rawurlencode($folderId) . ':/' . rawurlencode($name) . ':/content';
+            ? $base . '/root:/' . rawurlencode($name) . ':/content'
+            : $base . '/items/' . rawurlencode($folderId) . ':/' . rawurlencode($name) . ':/content';
 
         $response = Http::withToken($this->getAccessToken())
             ->withBody($content, $mime)
@@ -92,7 +123,7 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
 
         if ($response->failed()) {
             throw new ProviderException(
-                "OneDrive upload failed: {$response->body()}",
+                "SharePoint upload failed: {$response->body()}",
                 $this->getProviderName(),
                 $response->status(),
             );
@@ -101,10 +132,6 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
         return $this->mapDriveItem($response->json());
     }
 
-    // ──────────────────────────────────────────────
-    //  UPLOAD LARGE (upload session -- chunked, zero-copy)
-    // ──────────────────────────────────────────────
-
     public function uploadLargeFile(
         string $name,
         mixed $filePathOrStream,
@@ -112,7 +139,7 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
         string $folderId = '',
         int $chunkSize = 5 * 1024 * 1024,
     ): StorageFile {
-        // Graph API requires chunks to be multiples of 320 KiB
+        // Graph API requires chunks to be multiples of 320 KiB.
         $align = 320 * 1024;
         $chunkSize = (int) (floor($chunkSize / $align) * $align);
         if ($chunkSize < $align) {
@@ -129,11 +156,11 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
 
         $stat = fstat($stream);
         $totalSize = $stat['size'] ?? 0;
+        $base = $this->driveBase();
 
-        // 1. Create upload session
         $sessionPath = $folderId === ''
-            ? self::BASE_URL . '/root:/' . rawurlencode($name) . ':/createUploadSession'
-            : self::BASE_URL . '/items/' . rawurlencode($folderId) . ':/' . rawurlencode($name) . ':/createUploadSession';
+            ? $base . '/root:/' . rawurlencode($name) . ':/createUploadSession'
+            : $base . '/items/' . rawurlencode($folderId) . ':/' . rawurlencode($name) . ':/createUploadSession';
 
         $sessionResponse = $this->authenticatedHttp()->post($sessionPath, [
             'item' => [
@@ -144,10 +171,9 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
 
         $uploadUrl = $sessionResponse->json('uploadUrl');
         if (! is_string($uploadUrl) || $uploadUrl === '') {
-            throw new ProviderException('OneDrive did not return an upload session URL.', $this->getProviderName());
+            throw new ProviderException('SharePoint did not return an upload session URL.', $this->getProviderName());
         }
 
-        // 2. Upload chunks (no auth header needed -- token is in the URL)
         $offset = 0;
         $lastResponse = null;
 
@@ -176,7 +202,7 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
 
         if ($lastResponse === null || ! $lastResponse->successful()) {
             throw new ProviderException(
-                'OneDrive resumable upload failed' . ($lastResponse ? ": {$lastResponse->body()}" : '.'),
+                'SharePoint resumable upload failed' . ($lastResponse ? ": {$lastResponse->body()}" : '.'),
                 $this->getProviderName(),
             );
         }
@@ -190,13 +216,13 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
 
     public function downloadFile(string $fileId): string
     {
-        $path = self::BASE_URL . '/items/' . rawurlencode($fileId) . '/content';
+        $url = $this->driveBase() . '/items/' . rawurlencode($fileId) . '/content';
 
-        $response = Http::withToken($this->getAccessToken())->get($path);
+        $response = Http::withToken($this->getAccessToken())->get($url);
 
         if ($response->failed()) {
             throw new ProviderException(
-                "OneDrive download failed: {$response->body()}",
+                "SharePoint download failed: {$response->body()}",
                 $this->getProviderName(),
                 $response->status(),
             );
@@ -212,7 +238,7 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
             throw new ProviderException('Cannot open temp stream for download.', $this->getProviderName());
         }
 
-        $url = self::BASE_URL . '/items/' . rawurlencode($fileId) . '/content';
+        $url = $this->driveBase() . '/items/' . rawurlencode($fileId) . '/content';
 
         Http::withToken($this->getAccessToken())
             ->sink($tmpStream)
@@ -224,17 +250,8 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
     }
 
     // ──────────────────────────────────────────────
-    //  DELETE / FOLDER / SEARCH
+    //  FOLDERS / SEARCH
     // ──────────────────────────────────────────────
-
-    public function deleteFile(string $fileId): bool
-    {
-        $response = $this->authenticatedHttp()->delete(
-            self::BASE_URL . '/items/' . rawurlencode($fileId)
-        );
-
-        return $response->successful();
-    }
 
     public function createFolder(string $name, string $parentId = ''): StorageFile
     {
@@ -244,9 +261,11 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
             '@microsoft.graph.conflictBehavior' => 'rename',
         ];
 
+        $base = $this->driveBase();
+
         $path = $parentId === ''
-            ? self::BASE_URL . '/root/children'
-            : self::BASE_URL . '/items/' . rawurlencode($parentId) . '/children';
+            ? $base . '/root/children'
+            : $base . '/items/' . rawurlencode($parentId) . '/children';
 
         $response = $this->authenticatedHttp()->post($path, $body);
 
@@ -256,11 +275,33 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
     public function searchFiles(string $query, array $options = []): array
     {
         $escaped = str_replace("'", "''", $query);
-        $path = self::BASE_URL . "/root/search(q='{$escaped}')";
+        $path = $this->driveBase() . "/root/search(q='{$escaped}')";
 
         $response = $this->authenticatedHttp()->get($path);
 
-        return $this->mapDriveItemsResponse($response);
+        $items = $response->json('value') ?? [];
+
+        return array_map(fn (array $item): StorageFile => $this->mapDriveItem($item), $items);
+    }
+
+    // ──────────────────────────────────────────────
+    //  SITES
+    // ──────────────────────────────────────────────
+
+    /**
+     * List the document libraries (drives) available on the configured site.
+     * Useful when a tenant exposes several libraries beyond "Documents".
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listLibraries(): array
+    {
+        $siteId = $this->resolveSiteId();
+        $response = $this->authenticatedHttp()->get(
+            self::GRAPH_BASE . '/sites/' . rawurlencode($siteId) . '/drives'
+        );
+
+        return $response->json('value') ?? [];
     }
 
     // ──────────────────────────────────────────────
@@ -268,13 +309,53 @@ class MicrosoftOneDriveService extends AbstractService implements FileStorageInt
     // ──────────────────────────────────────────────
 
     /**
-     * @return array<int, StorageFile>
+     * Resolve the Graph base URL for the targeted document library.
+     * Pattern: `/sites/{siteId}/drives/{driveId}` or `/sites/{siteId}/drive`.
      */
-    private function mapDriveItemsResponse(Response $response): array
+    private function driveBase(): string
     {
-        $items = $response->json('value') ?? [];
+        if ($this->resolvedDriveBase !== null) {
+            return $this->resolvedDriveBase;
+        }
 
-        return array_map(fn (array $item): StorageFile => $this->mapDriveItem($item), $items);
+        $siteId = $this->resolveSiteId();
+        $driveId = $this->config['drive_id'] ?? null;
+
+        $this->resolvedDriveBase = $driveId !== null && $driveId !== ''
+            ? self::GRAPH_BASE . '/sites/' . rawurlencode($siteId) . '/drives/' . rawurlencode($driveId)
+            : self::GRAPH_BASE . '/sites/' . rawurlencode($siteId) . '/drive';
+
+        return $this->resolvedDriveBase;
+    }
+
+    private function resolveSiteId(): string
+    {
+        if (! empty($this->config['site_id'])) {
+            return (string) $this->config['site_id'];
+        }
+
+        $sitePath = $this->config['site_path'] ?? null;
+        if ($sitePath === null || $sitePath === '') {
+            throw new ProviderException(
+                'SharePoint requires either `site_id` or `site_path` in the provider config.',
+                $this->getProviderName(),
+            );
+        }
+
+        $response = $this->authenticatedHttp()->get(
+            self::GRAPH_BASE . '/sites/' . ltrim((string) $sitePath, '/')
+        );
+
+        $id = $response->json('id');
+        if (! is_string($id) || $id === '') {
+            throw new ProviderException(
+                "Unable to resolve SharePoint site path [{$sitePath}].",
+                $this->getProviderName(),
+                $response->status(),
+            );
+        }
+
+        return $id;
     }
 
     /**

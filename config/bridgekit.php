@@ -19,6 +19,14 @@ return [
             'redirect_uri' => env('BRIDGEKIT_MICROSOFT_REDIRECT_URI'),
             'tenant' => env('BRIDGEKIT_MICROSOFT_TENANT', 'common'),
             'scopes' => [],
+
+            // SharePoint document library defaults. Either fill `site_id` or
+            // `site_path` (e.g. `/contoso.sharepoint.com:/sites/marketing`).
+            'sharepoint' => [
+                'site_id' => env('BRIDGEKIT_SHAREPOINT_SITE_ID'),
+                'site_path' => env('BRIDGEKIT_SHAREPOINT_SITE_PATH'),
+                'drive_id' => env('BRIDGEKIT_SHAREPOINT_DRIVE_ID'),
+            ],
         ],
 
         'meta' => [

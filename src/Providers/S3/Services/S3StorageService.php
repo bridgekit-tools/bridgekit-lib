@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BridgeKit\Providers\S3\Services;
 
+use BridgeKit\Concerns\BuildsFileTree;
 use BridgeKit\Contracts\Storage\FileStorageInterface;
 use BridgeKit\DTOs\StorageFile;
 use BridgeKit\Exceptions\ProviderException;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Http;
 
 class S3StorageService implements FileStorageInterface
 {
+    use BuildsFileTree;
+
     private readonly string $bucket;
 
     private readonly string $region;
@@ -23,6 +26,8 @@ class S3StorageService implements FileStorageInterface
 
     private readonly string $endpoint;
 
+    private readonly bool $usePathStyle;
+
     public function __construct(array $config)
     {
         $this->bucket = $config['bucket'] ?? throw new ProviderException('S3 bucket is required.', 's3');
@@ -30,6 +35,9 @@ class S3StorageService implements FileStorageInterface
         $this->key = $config['key'] ?? throw new ProviderException('S3 access key is required.', 's3');
         $this->secret = $config['secret'] ?? throw new ProviderException('S3 secret key is required.', 's3');
         $this->endpoint = rtrim($config['endpoint'] ?? "https://s3.{$this->region}.amazonaws.com", '/');
+        // Path-style is required for most S3-compatible providers (MinIO, R2, ...)
+        // and when an explicit endpoint is supplied. AWS itself supports both.
+        $this->usePathStyle = (bool) ($config['use_path_style'] ?? isset($config['endpoint']));
     }
 
     public function listFiles(string $folderId = '', array $options = []): array
@@ -70,6 +78,7 @@ class S3StorageService implements FileStorageInterface
                     size: 0,
                     isFolder: true,
                     parentId: $folderId,
+                    webUrl: $this->buildObjectUrl($folderPath . '/'),
                 );
             }
 
@@ -86,6 +95,7 @@ class S3StorageService implements FileStorageInterface
                     size: (int) (string) $content->Size,
                     isFolder: false,
                     parentId: $folderId,
+                    webUrl: $this->buildObjectUrl($key),
                     modifiedAt: new DateTimeImmutable((string) $content->LastModified),
                     metadata: [
                         'etag' => trim((string) $content->ETag, '"'),
@@ -109,6 +119,7 @@ class S3StorageService implements FileStorageInterface
             size: (int) ($response->header('Content-Length') ?? 0),
             isFolder: false,
             parentId: dirname($fileId) !== '.' ? dirname($fileId) : '',
+            webUrl: $this->buildObjectUrl($fileId),
             modifiedAt: $response->header('Last-Modified')
                 ? new DateTimeImmutable($response->header('Last-Modified'))
                 : null,
@@ -135,6 +146,7 @@ class S3StorageService implements FileStorageInterface
             size: strlen($body),
             isFolder: false,
             parentId: $folderId,
+            webUrl: $this->buildObjectUrl($path),
         );
     }
 
@@ -204,6 +216,7 @@ class S3StorageService implements FileStorageInterface
             size: $totalSize,
             isFolder: false,
             parentId: $folderId,
+            webUrl: $this->buildObjectUrl($path),
         );
     }
 
@@ -250,7 +263,99 @@ class S3StorageService implements FileStorageInterface
             size: 0,
             isFolder: true,
             parentId: $parentId,
+            webUrl: $this->buildObjectUrl($path),
         );
+    }
+
+    /**
+     * Generate a presigned (time-limited) URL for the given object key.
+     *
+     * Use this whenever you need an authenticated download/preview link for a
+     * private bucket. For public buckets, `webUrl` on `StorageFile` already
+     * contains the canonical URL.
+     */
+    public function getPresignedUrl(string $fileId, int $expiresIn = 900): string
+    {
+        $now = new DateTimeImmutable('UTC');
+        $dateStamp = $now->format('Ymd');
+        $amzDate = $now->format('Ymd\THis\Z');
+        $service = 's3';
+
+        $host = (string) parse_url($this->endpoint, PHP_URL_HOST);
+        [$canonicalUri, $bareUrl] = $this->buildPathAndUrl($fileId);
+
+        $credentialScope = "{$dateStamp}/{$this->region}/{$service}/aws4_request";
+        $query = [
+            'X-Amz-Algorithm' => 'AWS4-HMAC-SHA256',
+            'X-Amz-Credential' => "{$this->key}/{$credentialScope}",
+            'X-Amz-Date' => $amzDate,
+            'X-Amz-Expires' => (string) max(1, $expiresIn),
+            'X-Amz-SignedHeaders' => 'host',
+        ];
+        ksort($query);
+        $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+
+        $canonicalRequest = implode("\n", [
+            'GET',
+            $canonicalUri,
+            $queryString,
+            "host:{$host}\n",
+            'host',
+            'UNSIGNED-PAYLOAD',
+        ]);
+
+        $stringToSign = implode("\n", [
+            'AWS4-HMAC-SHA256',
+            $amzDate,
+            $credentialScope,
+            hash('sha256', $canonicalRequest),
+        ]);
+
+        $signingKey = hash_hmac('sha256', 'aws4_request',
+            hash_hmac('sha256', $service,
+                hash_hmac('sha256', $this->region,
+                    hash_hmac('sha256', $dateStamp, 'AWS4' . $this->secret, true),
+                    true),
+                true),
+            true);
+
+        $signature = hash_hmac('sha256', $stringToSign, $signingKey);
+
+        return $bareUrl . '?' . $queryString . '&X-Amz-Signature=' . $signature;
+    }
+
+    /**
+     * Build the canonical, public web URL of an object inside the bucket.
+     *
+     * - AWS / virtual-host style: `https://{bucket}.s3.{region}.amazonaws.com/{key}`
+     * - Path style (MinIO, R2, custom endpoint): `{endpoint}/{bucket}/{key}`
+     */
+    private function buildObjectUrl(string $key): string
+    {
+        [, $url] = $this->buildPathAndUrl($key);
+
+        return $url;
+    }
+
+    /**
+     * @return array{0: string, 1: string} [canonicalPath, fullUrl]
+     */
+    private function buildPathAndUrl(string $key): array
+    {
+        $key = ltrim($key, '/');
+        $encodedKey = implode('/', array_map('rawurlencode', explode('/', $key)));
+
+        if ($this->usePathStyle) {
+            $path = '/' . $this->bucket . ($encodedKey === '' ? '' : '/' . $encodedKey);
+
+            return [$path, $this->endpoint . $path];
+        }
+
+        $host = "{$this->bucket}." . parse_url($this->endpoint, PHP_URL_HOST);
+        $scheme = parse_url($this->endpoint, PHP_URL_SCHEME) ?: 'https';
+        $path = '/' . $encodedKey;
+
+        return [$path, "{$scheme}://{$host}{$path}"];
     }
 
     public function searchFiles(string $query, array $options = []): array

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BridgeKit\Providers\Dropbox\Services;
 
+use BridgeKit\Concerns\BuildsFileTree;
 use BridgeKit\Contracts\Storage\FileStorageInterface;
 use BridgeKit\DTOs\StorageFile;
 use BridgeKit\Exceptions\ProviderException;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Http;
 
 class DropboxStorageService extends AbstractService implements FileStorageInterface
 {
+    use BuildsFileTree;
+
     private const string API_URL = 'https://api.dropboxapi.com/2';
 
     private const string CONTENT_URL = 'https://content.dropboxapi.com/2';

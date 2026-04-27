@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BridgeKit\Providers\Google\Services;
 
+use BridgeKit\Concerns\BuildsFileTree;
 use BridgeKit\Contracts\Storage\FileStorageInterface;
 use BridgeKit\DTOs\StorageFile;
 use BridgeKit\Exceptions\ProviderException;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Http;
 
 class GoogleDriveService extends AbstractService implements FileStorageInterface
 {
+    use BuildsFileTree;
+
     private const string BASE_URL = 'https://www.googleapis.com/drive/v3';
 
     private const string UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3';
